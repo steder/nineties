@@ -34,8 +34,9 @@ coverage.xml
 local_settings.py
 db.sqlite3
 db.sqlite3-journal
-media/
 staticfiles/
+# (No `media/` ignore: AudioBookShelf serves files, not Django uploads, and
+# `librarian/media/` is our pluggable-media-backend app package.)
 
 # --- Playwright ---
 test-results/

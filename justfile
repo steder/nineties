@@ -1,6 +1,8 @@
 # Nineties — cross-platform task runner.
 # Recipes prefer `uv run`, `docker compose`, and `gh` over raw shell so they work on Win/Mac/Linux.
 # Run `just` (no args) to list available recipes.
+#
+# All Python-side recipes cd into librarian/ since that's where pyproject.toml lives.
 
 set shell := ["bash", "-cu"]
 set dotenv-load := true
@@ -29,49 +31,61 @@ logs:
 
 # Unit + property + integration tests; target under 60s.
 test:
-    uv run pytest -m "not e2e and not bdd and not slow"
+    cd librarian && uv run pytest -m "not e2e and not bdd and not slow"
 
 # Gherkin user-journey scenarios.
 bdd:
-    uv run pytest -m bdd
+    cd librarian && uv run pytest -m bdd
 
 # End-to-end: Alexa request replay + Playwright browser E2E.
 e2e:
-    uv run pytest -m e2e
+    cd librarian && uv run pytest -m e2e
 
 # Single happy-path smoke run, ~10s. The agent's "did I break anything obvious" check.
 smoke:
-    uv run pytest -m smoke
+    cd librarian && uv run pytest -m smoke
 
 # Hypothesis property tests only (useful when iterating on the policy engine).
 property:
-    uv run pytest -m property
+    cd librarian && uv run pytest -m property
+
+# Django manage.py passthrough — `just manage migrate`, `just manage createsuperuser`, etc.
+manage *args:
+    cd librarian && uv run python manage.py {{args}}
+
+# Django system check.
+check:
+    cd librarian && uv run python manage.py check
 
 # --- Quality gates ---
 
 # Lint (no fixes).
 lint:
-    uv run ruff check .
+    cd librarian && uv run ruff check .
 
 # Apply formatting (Python + justfile).
 fmt:
-    uv run ruff format .
-    uv run ruff check --fix-only .
-    just --fmt --unstable
+    cd librarian && uv run ruff format .
+    cd librarian && uv run ruff check --fix-only .
+    just --fmt --unstable || true
 
 # Type check.
 typecheck:
-    uv run pyright
+    cd librarian && uv run pyright
 
 # Everything CI runs.
 ci: lint typecheck test
 
 # --- Setup helpers ---
 
+# Sync Python deps (use after editing pyproject.toml).
+sync:
+    cd librarian && uv sync
+
 # Install pre-commit hooks.
 install-hooks:
-    uv run pre-commit install
+    cd librarian && uv run pre-commit install
 
 # Install Playwright browser binaries (needed once after `uv sync`).
 install-playwright:
-    uv run playwright install --with-deps chromium
+    cd librarian && uv run playwright install --with-deps chromium
