@@ -1,0 +1,84 @@
+# Nineties — dev Compose stack.
+# This is the day-to-day local stack. It is NOT production-shaped.
+# Hosts: macOS (Docker Desktop / OrbStack), Linux, Windows + WSL2.
+#
+# Bring up: `just dev`     Tear down: `just down`     Logs: `just logs`
+#
+# Service inventory:
+#   - postgres        : data store (Postgres 18 + pgvector)
+#   - audiobookshelf  : audiobook media backend
+#   - librarian       : our Django service (built from ./librarian)
+#   - caddy           : reverse proxy fronting Librarian (so Cloudflare Tunnel has a single upstream)
+
+name: nineties
+
+services:
+  postgres:
+    image: pgvector/pgvector:pg18
+    container_name: nineties-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-nineties}
+      POSTGRES_USER: ${POSTGRES_USER:-nineties}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+    volumes:
+      - ./data/postgres:/var/lib/postgresql/data
+    ports:
+      - "127.0.0.1:5432:5432"   # localhost-only by default
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-nineties} -d ${POSTGRES_DB:-nineties}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  audiobookshelf:
+    image: ghcr.io/advplyr/audiobookshelf:latest
+    container_name: nineties-audiobookshelf
+    restart: unless-stopped
+    environment:
+      TZ: ${TZ:-America/Chicago}
+    volumes:
+      - ./data/audiobookshelf/config:/config
+      - ./data/audiobookshelf/metadata:/metadata
+      - ./fixtures/catalog:/audiobooks:ro       # dev fixture catalog (read-only)
+      - ./data/audiobookshelf/podcasts:/podcasts
+    ports:
+      - "127.0.0.1:13378:80"
+
+  librarian:
+    build:
+      context: ./librarian
+      dockerfile: Dockerfile
+    container_name: nineties-librarian
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      audiobookshelf:
+        condition: service_started
+    environment:
+      DJANGO_SETTINGS_MODULE: librarian.settings
+      DATABASE_URL: postgres://${POSTGRES_USER:-nineties}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-nineties}
+      AUDIOBOOKSHELF_URL: http://audiobookshelf:80
+      AUDIOBOOKSHELF_TOKEN: ${AUDIOBOOKSHELF_TOKEN:?set AUDIOBOOKSHELF_TOKEN in .env}
+      ALEXA_SKILL_ID: ${ALEXA_SKILL_ID:-}
+      SECRET_KEY: ${DJANGO_SECRET_KEY:?set DJANGO_SECRET_KEY in .env}
+      DEBUG: ${DJANGO_DEBUG:-true}
+      ALLOWED_HOSTS: ${ALLOWED_HOSTS:-localhost,127.0.0.1,librarian}
+    volumes:
+      - ./librarian:/app
+    ports:
+      - "127.0.0.1:8000:8000"
+
+  caddy:
+    image: caddy:2-alpine
+    container_name: nineties-caddy
+    restart: unless-stopped
+    depends_on:
+      - librarian
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./data/caddy/data:/data
+      - ./data/caddy/config:/config
+    ports:
+      - "127.0.0.1:8080:80"

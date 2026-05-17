@@ -1,0 +1,21 @@
+# Local-dev Caddyfile. Production deployment uses Cloudflare Tunnel + Caddy together
+# (Tunnel terminates TLS, Caddy proxies to Librarian) — see docs/setup.md (to be written).
+
+:80 {
+    encode gzip zstd
+
+    # Health endpoint passes through to Librarian.
+    handle /health* {
+        reverse_proxy librarian:8000
+    }
+
+    # Alexa skill webhook.
+    handle /voice/alexa* {
+        reverse_proxy librarian:8000
+    }
+
+    # Everything else — parent UI + admin.
+    handle {
+        reverse_proxy librarian:8000
+    }
+}

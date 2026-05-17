@@ -1,0 +1,79 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  ci:
+    name: lint + typecheck + test
+    runs-on: ubuntu-latest
+
+    # Postgres service is gated on `librarian/` existing; until it does, `just test`
+    # is a no-op and this job is mostly testing the wiring itself.
+    services:
+      postgres:
+        image: pgvector/pgvector:pg18
+        env:
+          POSTGRES_DB: nineties_test
+          POSTGRES_USER: nineties_test
+          POSTGRES_PASSWORD: nineties_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U nineties_test -d nineties_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      DATABASE_URL: postgres://nineties_test:nineties_test@localhost:5432/nineties_test
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          enable-cache: true
+
+      - name: Install just
+        uses: extractions/setup-just@v2
+
+      - name: Bootstrap Python via uv
+        if: hashFiles('librarian/pyproject.toml') != ''
+        run: |
+          cd librarian
+          uv sync --frozen
+
+      - name: Install Playwright browsers
+        if: hashFiles('librarian/pyproject.toml') != ''
+        run: |
+          cd librarian
+          uv run playwright install --with-deps chromium
+
+      - name: Lint
+        if: hashFiles('librarian/pyproject.toml') != ''
+        run: just lint
+
+      - name: Type check
+        if: hashFiles('librarian/pyproject.toml') != ''
+        run: just typecheck
+
+      - name: Tests
+        if: hashFiles('librarian/pyproject.toml') != ''
+        run: just test
+
+      - name: Wiring check (until librarian/ exists)
+        if: hashFiles('librarian/pyproject.toml') == ''
+        run: |
+          echo "librarian/ not yet scaffolded; CI wiring is exercised but no Python tests run yet."
+          just --list

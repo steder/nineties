@@ -1,0 +1,71 @@
+# --- Python ---
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+*.egg
+.eggs/
+build/
+dist/
+.venv/
+venv/
+env/
+ENV/
+
+# --- uv ---
+.uv-cache/
+
+# --- pytest / coverage / type-checkers ---
+.pytest_cache/
+.hypothesis/
+.coverage
+.coverage.*
+htmlcov/
+coverage.xml
+.cache/
+.mypy_cache/
+.ruff_cache/
+.pyright_cache/
+
+# --- Django ---
+*.log
+local_settings.py
+db.sqlite3
+db.sqlite3-journal
+media/
+staticfiles/
+
+# --- Playwright ---
+test-results/
+playwright-report/
+playwright/.cache/
+
+# --- Node (only if/when we add JS tooling) ---
+node_modules/
+
+# --- Project-specific ---
+data/                # postgres volume, logs, runtime state — never committed
+fixtures/catalog/*.m4b  # locally generated audio fixtures
+.env
+.env.*
+!.env.example
+secrets/
+*.pem
+*.key
+
+# --- IDE / editor ---
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# --- Claude Code (per-user local settings, never commit) ---
+.claude/settings.local.json
+.claude/.credentials.json
+
+# --- OS ---
+.DS_Store
+Thumbs.db
