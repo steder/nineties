@@ -48,7 +48,7 @@ node_modules/
 
 # --- Project-specific ---
 data/                # postgres volume, logs, runtime state — never committed
-fixtures/catalog/*.m4b  # locally generated audio fixtures
+fixtures/catalog/**/*.m4b  # locally generated audio fixtures (recursive)
 .env
 .env.*
 !.env.example

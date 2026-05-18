@@ -13,11 +13,20 @@ default:
 
 # --- Dev environment ---
 
-# Bring up the local Compose stack (Librarian + Postgres + AudioBookShelf + Caddy).
+# Bring up the local Compose stack (Postgres + AudioBookShelf).
+# Librarian runs on the host — see `just serve`.
 dev:
     docker compose up -d
-    @echo "Librarian: http://localhost:8000"
-    @echo "AudioBookShelf: http://localhost:13378"
+    @echo ""
+    @echo "Services up:"
+    @echo "  Postgres:       127.0.0.1:5432"
+    @echo "  AudioBookShelf: http://localhost:13378"
+    @echo ""
+    @echo "Start the Librarian on host in another terminal:  just serve"
+
+# Run the Librarian Django dev server on the host (against the dockerized DB).
+serve:
+    cd librarian && uv run python manage.py runserver 127.0.0.1:8000
 
 # Tear down the local stack.
 down:
@@ -89,3 +98,8 @@ install-hooks:
 # Install Playwright browser binaries (needed once after `uv sync`).
 install-playwright:
     cd librarian && uv run playwright install --with-deps chromium
+
+# Generate silent .m4b fixture audiobooks for AudioBookShelf to scan.
+# Uses a small static-linked ffmpeg Docker image so no system ffmpeg needed.
+fixtures:
+    python3 fixtures/catalog/generate.py
