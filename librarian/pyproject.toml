@@ -32,14 +32,15 @@ dev = [
     "pyright>=1.1.380",
     "django-stubs>=5.1,<6.0",
     # Tests — see CLAUDE.md / plans/0001 for the layered strategy
-    "pytest>=8.3,<9.0",
+    # pytest pinned >=9.0.3 to address GHSA-6w46-j5rx-g56g (tmpdir handling).
+    "pytest>=9.0.3,<10.0",
     "pytest-django>=4.9,<5.0",
-    "pytest-asyncio>=0.24,<1.0",
-    "pytest-bdd>=8.0,<9.0",
+    "pytest-asyncio>=1.0,<2.0",
+    "pytest-bdd>=8.0,<10.0",
     "pytest-playwright>=0.5,<1.0",
     "hypothesis>=6.115,<7.0",
     "factory-boy>=3.3,<4.0",
-    "syrupy>=4.8,<5.0",
+    "syrupy>=5.0,<6.0",
     "testcontainers[postgres]>=4.8,<5.0",
     # Pre-commit hooks
     "pre-commit>=4.0,<5.0",
